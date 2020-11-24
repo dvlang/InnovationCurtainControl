@@ -45,6 +45,8 @@ import math
 import qwiic_scmd
 import qwiic_dual_encoder_reader
 
+verion=0.5
+
 myMotor = qwiic_scmd.QwiicScmd()
 myEncoders = qwiic_dual_encoder_reader.QwiicDualEncoderReader()
 
@@ -52,7 +54,8 @@ NumRotations = 0
 exact_revolutions=0
 direction='null'
 
-def runExample():
+def curtainControl():
+    print("Verion: ",verion)
     if len(sys.argv) != 3:
         raise ValueError('ERROR: INSUFFICIENT INPUT PARAMETERS')
     print("passed arg ", sys.argv[1])
@@ -61,7 +64,7 @@ def runExample():
     print("direction= ", direction)
     
     NumRotations=int(sys.argv[2])
-    print("number of rotations ", NumRotations)
+    print("number of rotations haha1", NumRotations)
     
     
     print("Motor Test.")
@@ -149,7 +152,7 @@ def runExample():
 	
 if __name__ == '__main__':
     try:
-        runExample()
+        curtainControl()
     except (KeyboardInterrupt, SystemExit) as exErr:
         print("Ending example.")
         myMotor.disable()
