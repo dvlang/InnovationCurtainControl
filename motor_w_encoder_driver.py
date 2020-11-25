@@ -44,8 +44,9 @@ import sys
 import math
 import qwiic_scmd
 import qwiic_dual_encoder_reader
+from gpiozero import Button
 
-verion=0.5
+verion=0.14
 
 myMotor = qwiic_scmd.QwiicScmd()
 myEncoders = qwiic_dual_encoder_reader.QwiicDualEncoderReader()
@@ -53,6 +54,9 @@ myEncoders = qwiic_dual_encoder_reader.QwiicDualEncoderReader()
 NumRotations = 0
 exact_revolutions=0
 direction='null'
+OperateMotor=False
+        
+button = Button(17)
 
 def curtainControl():
     print("Verion: ",verion)
@@ -64,7 +68,7 @@ def curtainControl():
     print("direction= ", direction)
     
     NumRotations=int(sys.argv[2])
-    print("number of rotations haha1", NumRotations)
+    print("number of rotations ", NumRotations)
     
     
     print("Motor Test.")
@@ -102,53 +106,73 @@ def curtainControl():
 
     # Zero Motor Speeds
     myMotor.set_drive(0,0,0)
-    myMotor.set_drive(1,0,0)
+
 
     myMotor.enable()
     print("Motor enabled")
     time.sleep(.250)
 
-    myEncoders.count1=0
-    myEncoders.get_diff(True)
 
-    time.sleep(.250)
-    print("initial count: ",myEncoders.count1)
+    #myEncoders.get_diff(True)
+
+    #time.sleep(.250)
+    #print("initial count: ",myEncoders.count1)
 	
 	#Main Loop
-
-    loopcount=0
-    totalRotations=0
-    i=0
-    print("NumRotations is ",NumRotations)
-    
-
-    while i<NumRotations:
-        print("i= ", i)
-        myEncoders.count1=0
+   
+    while True:
+        #check to see if button pressed, wait here
+        print("Waiting for Press")
+        while not button.is_pressed:
+            time.sleep(1)
         
-        while abs(myEncoders.count1)<5462:
-            speed = 255
-            myMotor.set_drive(R_MTR,DIR,speed)
-            time.sleep(.15)
-
-            myMotor.set_drive(0,0,0)
-
-            time.sleep(.15)
-
+        #button is pressed
+        print("Pressed!!!!")
+        button.wait_for_release()
+        
+        #init counters
+        print("Initialize Counters")
+        myEncoders.count1=0
+        loopcount=0
+        totalRotations=0
+        i=0
+        print("NumRotations is ",NumRotations)
+                    
+        while i<NumRotations:
+            print("i= ", i)
+            myEncoders.count1=0
             
-            print("rotation_count: ",myEncoders.count1)
-            print("in loop ",loopcount)
-            loopcount=loopcount+1
-            if myEncoders.count1>=5462:
-                totalRotations=totalRotations+myEncoders.count1
-        print("Rotations ",(i+1))
-        i=i+1
-		
-    myMotor.set_drive(0,0,0)
-    myMotor.disable()
-    
-    exact_revolutions=totalRotations/5462.22
-    print("Revolutions: ",exact_revolutions)
+            while abs(myEncoders.count1)<5462:
+                speed = 255
+                myMotor.set_drive(R_MTR,DIR,speed)
+                time.sleep(.15)             #need just a little delay to let count propagate correction
+                myMotor.set_drive(0,0,0)    #stop to let motor position detection occur
+                time.sleep(.15)             #need just a little delay to let count propagate correction
+
+                print("rotation_count: ",myEncoders.count1)
+                print("in loop ",loopcount)
+                loopcount=loopcount+1
+                if myEncoders.count1>=5462:
+                    totalRotations=totalRotations+myEncoders.count1
+                
+
+            print("Rotations ",(i+1))
+            i=i+1
+        
+        #shut down motor    
+        myMotor.set_drive(0,0,0)
+        #myMotor.disable()
+        
+        #print the exact numbr of rotations performed
+        exact_revolutions=totalRotations/5462.22
+        print("Revolutions: ",exact_revolutions)
+        
+        print("DIR was: ", DIR)
+        if DIR==1:
+            DIR=0
+        else:
+            DIR=1
+        print("DIR is now: ", DIR)
 	
 if __name__ == '__main__':
     try:
