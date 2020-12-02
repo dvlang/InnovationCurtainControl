@@ -51,37 +51,47 @@ import qwiic_scmd
 import qwiic_dual_encoder_reader
 from gpiozero import Button
 
-tmpstr="null"
 
-version="0.4"
+#version string
+version="0.6"
+lf="curtainlog.txt"
+
 print("VERSION", version)
-fo=open("curtainlog.txt","a")
-
-fo.write(str(datetime.datetime.now()))
-   
-tmpstr=  " version= " + version +"\n"
-#fo.write("version=")
-#fo.write(str(version))
-#fo.write("\n")
-fo.write(tmpstr)
 
 myMotor = qwiic_scmd.QwiicScmd()
 myEncoders = qwiic_dual_encoder_reader.QwiicDualEncoderReader()
 
+#initialize globals
 NumRotations = 0
 exact_revolutions=0
 direction='null'
-OperateMotor=False
-        
+OperateMotor=False     
 button = Button(17)
-
+tmpstr="null"
 fullrotationsneeded=1
 
+####################################################################################################
+##  
+##  function:    logevent(string)
+##  inputs: string filename, string test
+##  return: 
+##  Description: ths function will open a file for appending, and added passed test with a timestamp
+##
+####################################################################################################
+##// BEGIN logevent()//###
+def logevent(logfilename,eventstring):
+    fo=open(logfilename,"a")
+    fo.write(str(datetime.datetime.now()))
+    tmpstring=" " + eventstring +"\n"
+    fo.write(tmpstring)
+    fo.close()
+    return
+##// END logevent()//###
 
 
 ####################################################################################################
 ##  
-##  function:    runmotor()
+##  function:    runmotor(string,int)
 ##  inputs: diretion (open|close), rotations(int)
 ##  return: 
 ##  Description: this function will run the motor in the direction set for the rotations requested
@@ -108,7 +118,7 @@ def runmotor(direction,rotations):
             file=sys.stderr)
         return
     myMotor.begin()
-    print("Motor initialized.")
+    #print("Motor initialized.")
     time.sleep(.250)
 
 	#initialize encoders
@@ -118,26 +128,26 @@ def runmotor(direction,rotations):
         return
     
 	myEncoders.begin()
-    print("Encoder initialized.")
+    #print("Encoder initialized.")
     time.sleep(.250)
 
     # Zero Motor Speeds
     myMotor.set_drive(0,0,0)
 
     myMotor.enable()
-    print("Motor enabled")
+    #print("Motor enabled")
     time.sleep(.250)
     
     #init counters
-    print("Initialize Counters")
+    #print("Initialize Counters")
     myEncoders.count1=0
     loopcount=0
     totalRotations=0
     i=0
-    print("NumRotations is ",NumRotations)
+    #print("NumRotations is ",NumRotations)
                     
     while i<NumRotations:
-        print("i= ", i)
+    #    print("i= ", i)
         myEncoders.count1=0
             
         while abs(myEncoders.count1)<5462:
@@ -147,14 +157,14 @@ def runmotor(direction,rotations):
             myMotor.set_drive(0,0,0)    #stop to let motor position detection occur
             time.sleep(.15)             #need just a little delay to let count propagate correction
 
-            print("rotation_count: ",myEncoders.count1)
-            print("in loop ",loopcount)
+    #        print("rotation_count: ",myEncoders.count1)
+    #        print("in loop ",loopcount)
             loopcount=loopcount+1
             if abs(myEncoders.count1)>=5462:
                 totalRotations=totalRotations+abs(myEncoders.count1)
 
 
-        print("Rotations ",(i+1))
+     #   print("Rotations ",(i+1))
         i=i+1
         
     #shut down motor    
@@ -163,13 +173,13 @@ def runmotor(direction,rotations):
         
     #print the exact numbr of rotations performed
     exact_revolutions=totalRotations/5462.22
-    print("Revolutions: ",exact_revolutions)    
+    #print("Revolutions: ",exact_revolutions)    
     
     myMotor.disable()
+    return
     
     
-    
-##// END runmotor//###
+##// END runmotor()//###
 
 ####################################################################################################
 ##  
@@ -192,13 +202,14 @@ def getsuntime(direction):
     sunrise = ephem.localtime(o.next_rising(s))  
     sunset=ephem.localtime(o.next_setting(s))  
 
-    #print(sunrise)
-    #print(sunset)
-    #print(now)
+#live time   
+    tsunrise= sunrise.replace(second=0, microsecond=0) #make it today
+    tsunset= sunset.replace(second=0, microsecond=0) #make it today
+
 
     #set up test times
-    tsunrise= sunrise.replace(month=11, day=30, microsecond=0) #make it today
-    tsunset= sunset.replace(month=11, day=30, microsecond=0) #make it today
+   # tsunrise= sunrise.replace(month=12, day=01, second=0, microsecond=0) #make it today
+    #tsunset= sunset.replace(month=12, day=01, second=0, microsecond=0) #make it today
 
 
     #print(tsunrise)
@@ -213,11 +224,35 @@ def getsuntime(direction):
         return null
 ##// END getsuntime//###
 
-###  MAIN ##########
+
+####################################################################################################
+##              THIS IS MY MAIN FUNCTION                                                         ###
+####################################################################################################  
+##  function:    curtain_controller()
+##  inputs: direction (sunset | sunrise)
+##  return: 
+##  Description: this function will run the motor in the direction set for the rotations requested
+##
+####################################################################################################
+##// BEGIN curtain_controller()//###
 def curtain_controller():
+    logevent(lf, "begin execution")
+    tmpstr=  " version= " + version +"\n"
+    logevent(lf,tmpstr) 
+    
+    timehour=int(sys.argv[1])
+    timemin=int(sys.argv[2])
+            
     now = datetime.datetime.now()       
-    today1am = now.replace(hour=1, minute=0, second=0, microsecond=0)
-    timetocheck = now.replace(month=11, day=30, hour=int(sys.argv[1]), minute=0, second=0, microsecond=0)
+    #use this line for test
+    #timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
+    #tmpstr="time to check= " +str(timetocheck)
+    #logevent(lf,tmpstr)       
+    
+    
+
+    
+
 
     #print(timetocheck)
         
@@ -228,17 +263,32 @@ def curtain_controller():
     curtainOpen=True
 
     #remove if not testing
-    if(sys.argv[2]=='t'):
+    if(sys.argv[3]=='t'):
         curtainOpen=True #grab a test initial position
-    elif(sys.argv[2]=='f'):
+    elif(sys.argv[3]=='f'):
         curtainOpen=False
+    
+    tmpstr="sunrise = " +str(getsuntime("sunrise"))
+    logevent(lf,tmpstr)
+    tmpstr="sunrise = " +str(getsuntime("sunset"))
+    logevent(lf,tmpstr)
 
     #main run loop
     while True:
+    
+        now = datetime.datetime.now()       
+        today1am = now.replace(hour=1, minute=0, second=0, microsecond=0)
+        #use this line for test
+        #timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
+        
+        #use this line for live
+        timetocheck = now.replace(second=0, microsecond=0)
+
+        
         #sun this routine to OPEN curtain
-        if(timetocheck>getsuntime("sunrise") and not openRunOnce and not curtainOpen and not timetocheck>getsuntime("sunset")):    #replace timetocheck with now for not testcase>
-            fo.write(str(datetime.datetime.now()))
-            fo.write(" sunrise open called\n")
+        if(timetocheck==getsuntime("sunrise") and not openRunOnce and not curtainOpen and not timetocheck==getsuntime("sunset")):    #replace timetocheck with now for not testcase>
+
+            logevent(lf," sunrise open called\n")
             openRunOnce=True
             runmotor("open",fullrotationsneeded)
             curtainOpen=True
@@ -247,9 +297,9 @@ def curtain_controller():
             
         
         #run this routine to CLOSE curtain
-        if(timetocheck>getsuntime("sunset") and not closeRunOnce and curtainOpen and not timetocheck<getsuntime("sunrise")):
-            fo.write(str(datetime.datetime.now()))
-            fo.write(" sunset close called\n")
+        if(timetocheck==getsuntime("sunset") and not closeRunOnce and curtainOpen and not timetocheck==getsuntime("sunrise")):
+
+            logevent(lf," sunset close called\n")
             closeRunOnce=True
             runmotor("close",fullrotationsneeded)
             curtainOpen=False
@@ -257,8 +307,8 @@ def curtain_controller():
         
         #run this routine to reset time automatic open/close flags
         if(today1am==timetocheck.replace(minute=0, second=0, microsecond=0)):
-            fo.write(str(datetime.datetime.now()))
-            fo.write(" reset day\n")
+
+            logevent(lf, " reset day\n")
             openRunOnce = False
             closeRunOnce= False
             print("reset for day")
@@ -273,18 +323,18 @@ def curtain_controller():
                 runmotor("close",fullrotationsneeded)
                 curtainOpen=False
                 print("curtain manually closed")
-                fo.write(str(datetime.datetime.now()))
-                fo.write(" user requested manual close\n")
+
+                logevent(lf," user requested manual close\n")
             else:
                 runmotor("open",fullrotationsneeded)
                 curtainOpen=True
                 print("curtain manually opened")
-                fo.write(str(datetime.datetime.now()))
-                fo.write(" user requested manual close\n")
+
+                logevent(lf," user requested manual close\n")
             time.sleep(.1)
 
-
-
+        #timehour=int(raw_input("new hour: "))
+        #timemin=int(raw_input("new min: "))
 
 
     
@@ -294,7 +344,5 @@ if __name__ == '__main__':
     except (KeyboardInterrupt, SystemExit) as exErr:
         print("Ending program")
         myMotor.disable()
-        fo.write(str(datetime.datetime.now()))
-        fo.write(" ERROR/EXIT\n")
-        fo.close()
+        logevent(lf," ERROR/EXIT\n*****************************************************\n")
         sys.exit(0)
