@@ -51,9 +51,9 @@ import qwiic_scmd
 import qwiic_dual_encoder_reader
 from gpiozero import Button
 
-
+live=True
 #version string
-version="0.6"
+version="0.7"
 lf="curtainlog.txt"
 
 print("VERSION", version)
@@ -203,13 +203,13 @@ def getsuntime(direction):
     sunset=ephem.localtime(o.next_setting(s))  
 
 #live time   
-    tsunrise= sunrise.replace(second=0, microsecond=0) #make it today
-    tsunset= sunset.replace(second=0, microsecond=0) #make it today
-
-
-    #set up test times
-   # tsunrise= sunrise.replace(month=12, day=01, second=0, microsecond=0) #make it today
-    #tsunset= sunset.replace(month=12, day=01, second=0, microsecond=0) #make it today
+    if(live):
+        tsunrise= sunrise.replace(second=0, microsecond=0) #make it today
+        tsunset= sunset.replace(second=0, microsecond=0) #make it today
+    else:
+        #set up test times
+        tsunrise= sunrise.replace(month=12, day=01, second=0, microsecond=0) #make it today
+        tsunset= sunset.replace(month=12, day=01, second=0, microsecond=0) #make it today
 
 
     #print(tsunrise)
@@ -244,16 +244,13 @@ def curtain_controller():
     timemin=int(sys.argv[2])
             
     now = datetime.datetime.now()       
-    #use this line for test
-    #timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
-    #tmpstr="time to check= " +str(timetocheck)
-    #logevent(lf,tmpstr)       
     
+    if(not live):
+        #use this line for test
+        timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
+        tmpstr="time to check= " +str(timetocheck)
+        logevent(lf,tmpstr)       
     
-
-    
-
-
     #print(timetocheck)
         
     openRunOnce = False
@@ -275,15 +272,19 @@ def curtain_controller():
 
     #main run loop
     while True:
-    
+        time.sleep(0.45)
         now = datetime.datetime.now()       
-        today1am = now.replace(hour=1, minute=0, second=0, microsecond=0)
-        #use this line for test
-        #timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
         
-        #use this line for live
-        timetocheck = now.replace(second=0, microsecond=0)
+        if(live):
+            today1am = now.replace(hour=1, minute=0, second=0, microsecond=0)
+        else:
+            today1am = now.replace(month=12, day=01, hour=1, minute=0, second=0, microsecond=0)
+        
+        if(live):
+            timetocheck = now.replace(microsecond=0)
+        
 
+        logevent(lf,str(timetocheck))
         
         #sun this routine to OPEN curtain
         if(timetocheck==getsuntime("sunrise") and not openRunOnce and not curtainOpen and not timetocheck==getsuntime("sunset")):    #replace timetocheck with now for not testcase>
@@ -306,8 +307,8 @@ def curtain_controller():
             print("sunset close")
         
         #run this routine to reset time automatic open/close flags
-        if(today1am==timetocheck.replace(minute=0, second=0, microsecond=0)):
-
+        #if(today1am==timetocheck.replace(minute=0, second=0, microsecond=0)):
+        if(today1am==timetocheck.replace(microsecond=0)):
             logevent(lf, " reset day\n")
             openRunOnce = False
             closeRunOnce= False
@@ -333,9 +334,19 @@ def curtain_controller():
                 logevent(lf," user requested manual close\n")
             time.sleep(.1)
 
-        #timehour=int(raw_input("new hour: "))
-        #timemin=int(raw_input("new min: "))
-
+        #if(not live):
+        #    timehour=int(raw_input("new hour: "))
+        #    timemin=int(raw_input("new min: "))
+        if(not live):
+            if(timemin<59):
+                timemin=timemin+1
+            else:
+                timemin=0
+                if(timehour<23):
+                    timehour=timehour+1
+                else:
+                    timehour=0
+            timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
 
     
 if __name__ == '__main__':
