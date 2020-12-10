@@ -51,9 +51,9 @@ import qwiic_scmd
 import qwiic_dual_encoder_reader
 from gpiozero import Button
 
-live=True
+live=False
 #version string
-version="0.7"
+version="0.8"
 lf="curtainlog.txt"
 
 print("VERSION", version)
@@ -68,7 +68,7 @@ direction='null'
 OperateMotor=False     
 button = Button(17)
 tmpstr="null"
-fullrotationsneeded=1
+fullrotationsneeded=2
 
 ####################################################################################################
 ##  
@@ -127,7 +127,7 @@ def runmotor(direction,rotations):
             file=sys.stderr)
         return
     
-	myEncoders.begin()
+    myEncoders.begin()
     #print("Encoder initialized.")
     time.sleep(.250)
 
@@ -208,8 +208,8 @@ def getsuntime(direction):
         tsunset= sunset.replace(second=0, microsecond=0) #make it today
     else:
         #set up test times
-        tsunrise= sunrise.replace(month=12, day=01, second=0, microsecond=0) #make it today
-        tsunset= sunset.replace(month=12, day=01, second=0, microsecond=0) #make it today
+        tsunrise= sunrise.replace(month=12, day=1, second=0, microsecond=0) #make it today
+        tsunset= sunset.replace(month=12, day=1, second=0, microsecond=0) #make it today
 
 
     #print(tsunrise)
@@ -229,7 +229,8 @@ def getsuntime(direction):
 ##              THIS IS MY MAIN FUNCTION                                                         ###
 ####################################################################################################  
 ##  function:    curtain_controller()
-##  inputs: direction (sunset | sunrise)
+##  inputs: none
+##  command line args: int hourtostart int minutetostart bool testmode
 ##  return: 
 ##  Description: this function will run the motor in the direction set for the rotations requested
 ##
@@ -247,7 +248,7 @@ def curtain_controller():
     
     if(not live):
         #use this line for test
-        timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
+        timetocheck = now.replace(month=12, day=1, hour=timehour, minute=timemin, second=0, microsecond=0)
         tmpstr="time to check= " +str(timetocheck)
         logevent(lf,tmpstr)       
     
@@ -278,7 +279,7 @@ def curtain_controller():
         if(live):
             today1am = now.replace(hour=1, minute=0, second=0, microsecond=0)
         else:
-            today1am = now.replace(month=12, day=01, hour=1, minute=0, second=0, microsecond=0)
+            today1am = now.replace(month=12, day=1, hour=1, minute=0, second=0, microsecond=0)
         
         if(live):
             timetocheck = now.replace(microsecond=0)
@@ -346,7 +347,7 @@ def curtain_controller():
                     timehour=timehour+1
                 else:
                     timehour=0
-            timetocheck = now.replace(month=12, day=01, hour=timehour, minute=timemin, second=0, microsecond=0)
+            timetocheck = now.replace(month=12, day=1, hour=timehour, minute=timemin, second=0, microsecond=0)
 
     
 if __name__ == '__main__':
