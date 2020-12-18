@@ -49,11 +49,12 @@ import time
 import math
 import qwiic_scmd
 import qwiic_dual_encoder_reader
+from adafruit_motorkit import MotorKit
 from gpiozero import Button
 
 live=False
 #version string
-version="0.8"
+version="0.11"
 lf="curtainlog.txt"
 
 print("VERSION", version)
@@ -69,6 +70,8 @@ OperateMotor=False
 button = Button(17)
 tmpstr="null"
 fullrotationsneeded=2
+timetoclose=8
+timetoopen=9.5
 
 ####################################################################################################
 ##  
@@ -110,72 +113,41 @@ def runmotor(direction,rotations):
         print("ERROR: INVALID DIRECTION")
         return
      
-    NumRotations=rotations
-    
-    #initialize motors
-    if myMotor.connected == False:
-        print("Motor Driver not connected. Check connections.", \
-            file=sys.stderr)
-        return
-    myMotor.begin()
-    #print("Motor initialized.")
-    time.sleep(.250)
+    #NumRotations=rotations
 
-	#initialize encoders
-    if myEncoders.connected == False:
-        print("The Qwiic Dual Encoder Reader device isn't connected to the system. Please check your connection", \
-            file=sys.stderr)
-        return
+    kit = MotorKit()
+    rotation=0
+    kit.motor1.throttle = 0       
     
-    myEncoders.begin()
-    #print("Encoder initialized.")
-    time.sleep(.250)
+    if direction=="open":
+ 
+        #intDuration=2.95
 
-    # Zero Motor Speeds
-    myMotor.set_drive(0,0,0)
 
-    myMotor.enable()
-    #print("Motor enabled")
-    time.sleep(.250)
-    
-    #init counters
-    #print("Initialize Counters")
-    myEncoders.count1=0
-    loopcount=0
-    totalRotations=0
-    i=0
-    #print("NumRotations is ",NumRotations)
-                    
-    while i<NumRotations:
-    #    print("i= ", i)
-        myEncoders.count1=0
+        #open
+        #intDuration=2.75*9.5
+        intDuration=2.75*rotations
+        rotation=1.0
             
-        while abs(myEncoders.count1)<5462:
-            speed = 255
-            myMotor.set_drive(0,DIR,speed)
-            time.sleep(.15)             #need just a little delay to let count propagate correction
-            myMotor.set_drive(0,0,0)    #stop to let motor position detection occur
-            time.sleep(.15)             #need just a little delay to let count propagate correction
-
-    #        print("rotation_count: ",myEncoders.count1)
-    #        print("in loop ",loopcount)
-            loopcount=loopcount+1
-            if abs(myEncoders.count1)>=5462:
-                totalRotations=totalRotations+abs(myEncoders.count1)
+        kit.motor1.throttle = rotation
+        time.sleep(intDuration)
+        kit.motor1.throttle = 0
+    elif direction=="close":
+     
+        #intDuration=2.95
 
 
-     #   print("Rotations ",(i+1))
-        i=i+1
-        
-    #shut down motor    
-    myMotor.set_drive(0,0,0)
-    #myMotor.disable()
-        
-    #print the exact numbr of rotations performed
-    exact_revolutions=totalRotations/5462.22
-    #print("Revolutions: ",exact_revolutions)    
+        #open
+        #intDuration=2.75*9.5
+        intDuration=2.75*rotations
+        rotation=-1.0
+            
+        kit.motor1.throttle = rotation
+        time.sleep(intDuration)
+        kit.motor1.throttle = 0
+    else:
+        return
     
-    myMotor.disable()
     return
     
     
@@ -292,7 +264,7 @@ def curtain_controller():
 
             logevent(lf," sunrise open called\n")
             openRunOnce=True
-            runmotor("open",fullrotationsneeded)
+            runmotor("open",timetoopen)
             curtainOpen=True
             print("sunrise open")
 
@@ -303,7 +275,7 @@ def curtain_controller():
 
             logevent(lf," sunset close called\n")
             closeRunOnce=True
-            runmotor("close",fullrotationsneeded)
+            runmotor("close",timetoclose)
             curtainOpen=False
             print("sunset close")
         
@@ -322,13 +294,13 @@ def curtain_controller():
             time.sleep(.5)
             print("button released")
             if curtainOpen:
-                runmotor("close",fullrotationsneeded)
+                runmotor("close",timetoclose)
                 curtainOpen=False
                 print("curtain manually closed")
 
                 logevent(lf," user requested manual close\n")
             else:
-                runmotor("open",fullrotationsneeded)
+                runmotor("open",timetoopen)
                 curtainOpen=True
                 print("curtain manually opened")
 
