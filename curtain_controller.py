@@ -54,7 +54,7 @@ from gpiozero import Button
 
 live=True
 #version string
-version="0.21"
+version="0.22"
 lf="/home/pi/Documents/curtaincontroller/curtainlog.txt"
 
 print("VERSION", version)
