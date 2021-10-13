@@ -52,10 +52,10 @@ import qwiic_dual_encoder_reader
 from adafruit_motorkit import MotorKit
 from gpiozero import Button
 
-live=False
+live=True
 #version string
-version="0.11"
-lf="curtainlog.txt"
+version="0.21"
+lf="/home/pi/Documents/curtaincontroller/curtainlog.txt"
 
 print("VERSION", version)
 
@@ -70,8 +70,8 @@ OperateMotor=False
 button = Button(17)
 tmpstr="null"
 fullrotationsneeded=2
-timetoclose=8
-timetoopen=9.5
+timetoclose=16
+timetoopen=16
 
 ####################################################################################################
 ##  
@@ -209,9 +209,14 @@ def getsuntime(direction):
 ####################################################################################################
 ##// BEGIN curtain_controller()//###
 def curtain_controller():
-    logevent(lf, "begin execution")
+
     tmpstr=  " version= " + version +"\n"
-    logevent(lf,tmpstr) 
+    logevent(lf, tmpstr)
+    if(live):
+        tmpstr="LIVE MODE"
+        logevent(lf,tmpstr) 
+        
+    logevent(lf, "begin execution")
     
     timehour=int(sys.argv[1])
     timemin=int(sys.argv[2])
@@ -230,7 +235,7 @@ def curtain_controller():
     closeRunOnce= False
 
     #this value needs to represent the absolute position from position sensor
-    curtainOpen=True
+    curtainOpen=False
 
     #remove if not testing
     if(sys.argv[3]=='t'):
@@ -240,7 +245,7 @@ def curtain_controller():
     
     tmpstr="sunrise = " +str(getsuntime("sunrise"))
     logevent(lf,tmpstr)
-    tmpstr="sunrise = " +str(getsuntime("sunset"))
+    tmpstr="sunset = " +str(getsuntime("sunset"))
     logevent(lf,tmpstr)
 
     #main run loop
@@ -257,7 +262,7 @@ def curtain_controller():
             timetocheck = now.replace(microsecond=0)
         
 
-        logevent(lf,str(timetocheck))
+        #logevent(lf,str(timetocheck))
         
         #sun this routine to OPEN curtain
         if(timetocheck==getsuntime("sunrise") and not openRunOnce and not curtainOpen and not timetocheck==getsuntime("sunset")):    #replace timetocheck with now for not testcase>
@@ -286,6 +291,14 @@ def curtain_controller():
             openRunOnce = False
             closeRunOnce= False
             print("reset for day")
+            tmpstr="New sunrise = " +str(getsuntime("sunrise"))
+            logevent(lf,tmpstr)
+            tmpstr="New sunset = " +str(getsuntime("sunset"))
+            logevent(lf,tmpstr)
+            time.sleep(60)
+        
+        #if(openRunOnce and closeRunOnce):
+         #   logevent(lf, " new reset day routine\n")
         
         #check for manual current open/close request
         while button.is_pressed:
@@ -304,7 +317,7 @@ def curtain_controller():
                 curtainOpen=True
                 print("curtain manually opened")
 
-                logevent(lf," user requested manual close\n")
+                logevent(lf," user requested manual open\n")
             time.sleep(.1)
 
         #if(not live):

@@ -13,7 +13,7 @@ spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(board.D5)
 
 # create the mcp object
-mcp = MCP.MCP3008(spi, cs)
+mcp = MCP.MCP3008(spi, cs,5)
 
 # create an analog input channel on pin 0
 chan = AnalogIn(mcp, MCP.P0)
