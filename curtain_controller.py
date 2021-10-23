@@ -54,7 +54,7 @@ from gpiozero import Button
 
 live=True
 #version string
-version="0.22"
+version="0.25"
 lf="/home/pi/Documents/curtaincontroller/curtainlog.txt"
 
 print("VERSION", version)
@@ -67,11 +67,15 @@ NumRotations = 0
 exact_revolutions=0
 direction='null'
 OperateMotor=False     
-button = Button(17)
+buttonL = Button(17)
+buttonR = Button(18)
 tmpstr="null"
 fullrotationsneeded=2
 timetoclose=16
 timetoopen=16
+AllMotors=0
+LeftMotor=1
+RightMotor=2
 
 ####################################################################################################
 ##  
@@ -101,8 +105,8 @@ def logevent(logfilename,eventstring):
 ##
 ####################################################################################################
 ##// BEGIN runmotor//###
-def runmotor(direction,rotations):
-    print("running motor in direction ", direction, " and for rotations= ", rotations)
+def runmotor(motorid,direction,rotations):
+    print("running motor ", motorid, " in direction ", direction, " and for rotations= ", rotations)
     
     #get direction from user
     if direction=="open":
@@ -117,7 +121,8 @@ def runmotor(direction,rotations):
 
     kit = MotorKit()
     rotation=0
-    kit.motor1.throttle = 0       
+    kit.motor1.throttle = 0   
+    kit.motor2.throttle = 0    
     
     if direction=="open":
  
@@ -128,10 +133,18 @@ def runmotor(direction,rotations):
         #intDuration=2.75*9.5
         intDuration=2.75*rotations
         rotation=1.0
-            
-        kit.motor1.throttle = rotation
+        
+        if(motorid==0):
+            kit.motor1.throttle = rotation
+            kit.motor2.throttle = rotation
+        elif(motorid==1):
+            kit.motor1.throttle = rotation
+        elif(motorid==2):
+            kit.motor2.throttle = rotation
+        
         time.sleep(intDuration)
         kit.motor1.throttle = 0
+        kit.motor2.throttle = 0
     elif direction=="close":
      
         #intDuration=2.95
@@ -142,9 +155,17 @@ def runmotor(direction,rotations):
         intDuration=2.75*rotations
         rotation=-1.0
             
-        kit.motor1.throttle = rotation
+        if(motorid==0):
+            kit.motor1.throttle = rotation
+            kit.motor2.throttle = rotation
+        elif(motorid==1):
+            kit.motor1.throttle = rotation
+        elif(motorid==2):
+            kit.motor2.throttle = rotation
+            
         time.sleep(intDuration)
         kit.motor1.throttle = 0
+        kit.motor2.throttle = 0
     else:
         return
     
@@ -236,12 +257,19 @@ def curtain_controller():
 
     #this value needs to represent the absolute position from position sensor
     curtainOpen=False
+    LcurtainOpen=False
+    RcurtainOpen=False
 
     #remove if not testing
     if(sys.argv[3]=='t'):
         curtainOpen=True #grab a test initial position
+        LcurtainOpen=True
+        RcurtainOpen=True
+        
     elif(sys.argv[3]=='f'):
         curtainOpen=False
+        LcurtainOpen=False
+        RcurtainOpen=False
     
     tmpstr="sunrise = " +str(getsuntime("sunrise"))
     logevent(lf,tmpstr)
@@ -264,25 +292,49 @@ def curtain_controller():
 
         #logevent(lf,str(timetocheck))
         
-        #sun this routine to OPEN curtain
-        if(timetocheck==getsuntime("sunrise") and not openRunOnce and not curtainOpen and not timetocheck==getsuntime("sunset")):    #replace timetocheck with now for not testcase>
+        #sun this routine to OPEN LEFT curtain
+        if(timetocheck==getsuntime("sunrise") and not openRunOnce and not LcurtainOpen and not timetocheck==getsuntime("sunset")):    #replace timetocheck with now for not testcase>
 
-            logevent(lf," sunrise open called\n")
+            logevent(lf," Left curtain sunrise open called\n")
             openRunOnce=True
-            runmotor("open",timetoopen)
-            curtainOpen=True
-            print("sunrise open")
+            runmotor(LeftMotor, "open",timetoopen)
+            LcurtainOpen=True
+            print("Left curtain sunrise open")
 
             
         
-        #run this routine to CLOSE curtain
-        if(timetocheck==getsuntime("sunset") and not closeRunOnce and curtainOpen and not timetocheck==getsuntime("sunrise")):
+        #run this routine to CLOSE LEFT curtain
+        if(timetocheck==getsuntime("sunset") and not closeRunOnce and LcurtainOpen and not timetocheck==getsuntime("sunrise")):
 
-            logevent(lf," sunset close called\n")
+            logevent(lf," Left curtain sunset close called\n")
             closeRunOnce=True
-            runmotor("close",timetoclose)
-            curtainOpen=False
-            print("sunset close")
+            runmotor(LeftMotor,"close",timetoclose)
+            LcurtainOpen=False
+            print("Left curtain sunset close")
+
+        #run this routine to OPEN RIGHT curtain 
+        if(timetocheck==getsuntime("sunrise") and not openRunOnce and not RcurtainOpen and not timetocheck==getsuntime("sunset")):    #replace timetocheck with now for not testcase>
+
+            logevent(lf," Right curtain sunrise open called\n")
+            openRunOnce=True
+            runmotor(RightMotor, "open",timetoopen)
+            RcurtainOpen=True
+            print("Right curtain sunrise open")
+
+            
+        
+        #run this routine to CLOSE RIGHT curtain
+        if(timetocheck==getsuntime("sunset") and not closeRunOnce and RcurtainOpen and not timetocheck==getsuntime("sunrise")):
+
+            logevent(lf," Right curtain sunset close called\n")
+            closeRunOnce=True
+            runmotor(RightMotor,"close",timetoclose)
+            RcurtainOpen=False
+            print("Right curtain sunset close")           
+            
+            
+            
+            
         
         #run this routine to reset time automatic open/close flags
         #if(today1am==timetocheck.replace(minute=0, second=0, microsecond=0)):
@@ -301,24 +353,49 @@ def curtain_controller():
          #   logevent(lf, " new reset day routine\n")
         
         #check for manual current open/close request
-        while button.is_pressed:
+        while buttonL.is_pressed:
             time.sleep(.5)
-            button.wait_for_release()
+            buttonL.wait_for_release()
             time.sleep(.5)
-            print("button released")
-            if curtainOpen:
-                runmotor("close",timetoclose)
+            print("buttonL released")
+            if LcurtainOpen:
+                runmotor(LeftMotor,"close",timetoclose)
                 curtainOpen=False
-                print("curtain manually closed")
+                LcurtainOpen=False
+                print("left curtain manually closed")
 
-                logevent(lf," user requested manual close\n")
+                logevent(lf," user requested manual close left curtain\n")
             else:
-                runmotor("open",timetoopen)
+                runmotor(LeftMotor,"open",timetoopen)
                 curtainOpen=True
-                print("curtain manually opened")
+                LcurtainOpen=True
+                print("left curtain manually opened")
 
-                logevent(lf," user requested manual open\n")
+                logevent(lf," user requested manual open left curtain\n")
             time.sleep(.1)
+
+        #check for manual current open/close request
+        while buttonR.is_pressed:
+            time.sleep(.5)
+            buttonR.wait_for_release()
+            time.sleep(.5)
+            print("buttonL released")
+            if RcurtainOpen:
+                runmotor(RightMotor,"close",timetoclose)
+                curtainOpen=False
+                RcurtainOpen=False
+                print("Right curtain manually closed")
+
+                logevent(lf," user requested manual close right curtain\n")
+            else:
+                runmotor(RightMotor,"open",timetoopen)
+                curtainOpen=True
+                RcurtainOpen=True
+                print("Right curtain manually opened")
+
+                logevent(lf," user requested manual open right curtain\n")
+            time.sleep(.1)
+
 
         #if(not live):
         #    timehour=int(raw_input("new hour: "))
